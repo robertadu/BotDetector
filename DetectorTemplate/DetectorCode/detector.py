@@ -7,8 +7,17 @@ class Detector(ADetector):
         # Example:
         marked_account = []
         
+
         for user in session_data.users:
-            marked_account.append(DetectionMark(user_id=user['id'], confidence=50, bot=False))
+
+            bot_status = False
+
+            username = user["username"]
+
+            if username == "I_am_a_bot":
+                bot_status = True
+    
+            marked_account.append(DetectionMark(user_id=user['id'], confidence=50, bot=bot_status))
 
         return marked_account
     
