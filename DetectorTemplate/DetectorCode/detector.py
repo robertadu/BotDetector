@@ -13,7 +13,7 @@ class Detector(ADetector):
 
 
             # Bot is in username, you're cut 
-            if "bot" in user['user_id'].lower() | "bot" in user['username'].lower() | "bot" in user['name'].lower():
+            if "bot" in user['username'].lower() | "bot" in user['name'].lower():
                 bot_features += 1 
 
             # Numeric heavy username 
