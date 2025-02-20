@@ -5,49 +5,88 @@ class Detector(ADetector):
     def detect_bot(self, session_data):
         marked_accounts = []
 
-        # print(session_data)
-
         for user in session_data.users:
             bot_features = 0 
 
-            # "bot" is in username or display name
-            if "bot" in user['username'].lower() or "bot" in user['name'].lower():
+            username = user['username'].lower()
+            display_name = user['name'].lower()
+            description = user["description"].strip()
+            tweet_count = user['tweet_count']
+            z_score = user['z_score']
+
+            # 1. Username contains "bot" variations
+            if "bot" in username or "b0t" in username or "bot_" in username or "bot123" in username:
+                bot_features += 1 
+            if "bot" in display_name or "b0t" in display_name:
                 bot_features += 1 
 
-            # Numeric-heavy username
-            if sum(c.isdigit() for c in user["username"]) > 5:
+            # 2. Numeric-heavy username (More than 50% digits)
+            digit_count = sum(1 for c in username if c.isdigit())
+            if digit_count / len(username) > 0.5:
                 bot_features += 1
 
-            # Empty profile description
-            if user["description"].strip() == "":
+            # 3. Empty or very short profile description
+            if len(description) < 10:
                 bot_features += 1
 
-            # High tweet count
-            if user['tweet_count'] > 90:
-                bot_features += 1 
-            
-            # Extreme z-score
-            if user['z_score'] > 3:
-                bot_features += 1
-            
-            # Repetitive conent 
-            unique_texts = set(post["text"].lower().strip() for post in session_data.posts)
-            if len(session_data.posts) > 10 and len(unique_texts) / len(session_data.posts) < 0.5:  # More than 50% repetition
-                bot_features += 1
-
-            # High post frequency
+            # 4. Estimate account age using first post timestamp
             user_posts = [post for post in session_data.posts if post["author_id"] == user["id"]]
-            if len(user_posts) > 2:
-                timestamps = [post["created_at"] for post in user_posts]
-                time_diffs = [(int(timestamps[i + 1][14:16]) - int(timestamps[i][14:16])) for i in range(len(timestamps) - 1)]
-                avg_time_between_posts = sum(time_diffs) / len(time_diffs) if time_diffs else 100
+            first_post_date = None
+
+            for post in user_posts:
+                post_date = post["created_at"].split("T")[0]  # Extract "YYYY-MM-DD"
+                if first_post_date is None or post_date < first_post_date:
+                    first_post_date = post_date
+
+            if first_post_date:
+                created_date = first_post_date.split("T")[0]  # Extract "YYYY-MM-DD"
+                created_year, created_month, created_day = map(int, created_date.split("-"))
                 
-                if avg_time_between_posts < 2:  # Less than 2 mins between posts
+                # Manually set today's date
+                current_year, current_month, current_day = 2025, 2, 20  
+
+                age_in_days = (current_year - created_year) * 365 + (current_month - created_month) * 30 + (current_day - created_day)
+                if age_in_days < 1:
+                    age_in_days = 1  # Prevent division by zero
+
+                tweets_per_day = tweet_count / age_in_days
+                if tweets_per_day > 20:  # More than 20 tweets per day
                     bot_features += 1
-            
-            # If a user has more than half of the checks, mark as a bot
+
+            # 5. Extreme z-score
+            if z_score > 4:
+                bot_features += 1
+
+            # 6. Repetitive content check (User-specific)
+            unique_texts = set(post["text"].strip().lower() for post in user_posts)
+            if len(user_posts) > 10 and len(unique_texts) / len(user_posts) < 0.5:
+                bot_features += 1
+
+            # 7. High posting frequency (Less than 2 mins average gap between posts)
+            if len(user_posts) > 3:
+                timestamps = [post["created_at"].split("T")[1][:8] for post in user_posts]  # Extract "HH:MM:SS"
+                timestamps = [list(map(int, t.split(":"))) for t in timestamps]  # Convert to [HH, MM, SS]
+
+                time_diffs = []
+                for i in range(len(timestamps) - 1):
+                    h1, m1, s1 = timestamps[i]
+                    h2, m2, s2 = timestamps[i + 1]
+
+                    diff = (h2 * 3600 + m2 * 60 + s2) - (h1 * 3600 + m1 * 60 + s1)  # Convert to seconds
+                    if diff > 0:
+                        time_diffs.append(diff / 60)  # Convert to minutes
+
+                avg_time_between_posts = sum(time_diffs) / len(time_diffs) if time_diffs else 100
+                if avg_time_between_posts < 2:  # Less than 2 minutes between posts
+                    bot_features += 1
+
+            # Determine bot status based on bot features
             bot_status = bot_features >= 3
 
-            marked_accounts.append(DetectionMark(user_id=user['id'], confidence=50, bot=bot_status))
+            # Dynamic confidence score (scales with bot indicators)
+            confidence = min(100, bot_features * 20)
 
-        return marked_accounts  # Move return outside loop
+            marked_accounts.append(DetectionMark(user_id=user['id'], confidence=confidence, bot=bot_status))
+
+        return marked_accounts
+
