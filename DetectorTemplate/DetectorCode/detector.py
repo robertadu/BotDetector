@@ -6,111 +6,199 @@ import math
 import statistics
 import re
 
-class Detector(ADetector):
-    def detect_bot(self, session_data):
-        marked_accounts = []
+import pandas as pd 
+import pickle
+import numpy as np
 
-        # Comment out print statements before pushing to repo
-        # print("Users:", json.dumps(session_data.users, indent = 4))
-        # print("Posts:", json.dumps(session_data.posts, indent = 4))
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder
 
 
-        for user in session_data.users:
-            bot_features = 0 
+# class Detector(ADetector):
+    
+#     def __init__(self):
+#         self.model = pickle.load(open('logisticRegressor.pkl', 'rb'))
 
-            username = user['username'].lower()
-            display_name = user['name'].lower()
-            description = user["description"].strip()
-            tweet_count = user['tweet_count']
-            z_score = user['z_score']
+#     def detect_bot(self, session_data):
+#         marked_accounts = []
 
-            user_posts = [post for post in session_data.posts if post["author_id"] == user["id"]]
+#         for user in session_data.users:
+#             # create input features vector
+#             features = np.array([
+#                 user['username'],
+#                 user['tweet_count'],
+#                 user['z_score'],
+#             ]).reshape(-1, 1)
 
-            # Username contains "bot" variations
-            if "bot" in username or "b0t" in username or "bot_" in username or "bot123" in username:
-                bot_features += 1 
-            if "bot" in display_name or "b0t" in display_name:
-                bot_features += 1 
+#             # make prediction
+#             bot_status_probabilty = self.model.predict_proba(features) # maybe wrong shape here 
 
-            # Numeric-heavy username (More than 50% digits)
-            digit_count = sum(1 for c in username if c.isdigit())
-            if digit_count / len(username) > 0.5:
-                bot_features += 1
+#             bot_status = True if bot_status_probabilty > 0.5 else False
 
-            # Empty or very short profile description
-            if len(description) < 10:
-                bot_features += 1
+#             marked_accounts.append(DetectionMark(user_id=user['id'], confidence=bot_status_probabilty, bot=bot_status))
 
-            # Random character username detection
-            if len(username) > 6:
-                unique_chars = len(set(username))
-                if unique_chars / len(username) > 0.8:  
-                    bot_features += 1
+#         return marked_accounts
 
-            # Estimate account age using first post timestamp
-            first_post_date = None
+# class Detector(ADetector):
+    
+#     def __init__(self):
+#         self.model = pickle.load(open("logisticRegressor.pkl", "rb"))
+#         print("Model expects features:", self.model.feature_names_in_)  # Debugging
 
-            for post in user_posts:
-                post_date = post["created_at"].split("T")[0]  # Extract "YYYY-MM-DD"
-                if first_post_date is None or post_date < first_post_date:
-                    first_post_date = post_date
+#     def detect_bot(self, session_data):
+#         marked_accounts = []
 
-            if first_post_date:
-                created_date = first_post_date.split("T")[0]  # Extract "YYYY-MM-DD"
-                created_year, created_month, created_day = map(int, created_date.split("-"))
+#         for user in session_data.users:
                 
-                # Manually set today's date
-                current_year, current_month, current_day = 2025, 2, 20  
+#                 # print(session_data.users)
 
-                age_in_days = (current_year - created_year) * 365 + (current_month - created_month) * 30 + (current_day - created_day)
-                if age_in_days < 1:
-                    age_in_days = 1  
+#                 df = pd.DataFrame(session_data.users)
+#                 label_encoder = LabelEncoder()
+#                 df["username_encoded"] = label_encoder.fit_transform(df["username"])
+#                 # print(df)
+                
+         
+#                 # Extract feature names from the trained model
+#                 # expected_features = self.model.feature_names_in_
 
-                tweets_per_day = tweet_count / age_in_days
-                if tweets_per_day > 20:  
-                    bot_features += 1
+#                 # # Dynamically build feature vector
+#                 # features = np.array([
+#                 #     (user[feature].astype(int)) for feature in expected_features
+#                 # ]).reshape(1, -1)
 
-            # Extreme z-score
-            if z_score > 2:
-                bot_features += 1
+#                 # print("Features:", features)  # Debugging
+#                 # print("Feature dtypes:", [type(f) for f in features.flatten()])
 
-            # Repetitive content check (User-specific)
-            unique_texts = set(post["text"].strip().lower() for post in user_posts)
-            if len(user_posts) > 10 and len(unique_texts) / len(user_posts) < 0.5:
-                bot_features += 1
+#                 # create input features vector
+#                 features = np.array([
+#                     df['username_encoded'],
+#                     df['tweet_count'],
+#                     df['z_score'],
+#                 ]).reshape(-1, 1)
 
-            # High posting frequency (Less than 2 mins average gap between posts)
-            if len(user_posts) > 3:
-                timestamps = [post["created_at"].split("T")[1][:8] for post in user_posts]  # Extract "HH:MM:SS"
-                timestamps = [list(map(int, t.split(":"))) for t in timestamps]  # Convert to [HH, MM, SS]
 
-                time_diffs = []
-                for i in range(len(timestamps) - 1):
-                    h1, m1, s1 = timestamps[i]
-                    h2, m2, s2 = timestamps[i + 1]
 
-                    diff = (h2 * 3600 + m2 * 60 + s2) - (h1 * 3600 + m1 * 60 + s1)  # Convert to seconds
-                    if diff > 0:
-                        time_diffs.append(diff / 60)  # Convert to minutes
+#                 # Make prediction
+#                 bot_status_probability = self.model.predict_proba(features)[0][1]  # Get probability of bot class
 
-                avg_time_between_posts = sum(time_diffs) / len(time_diffs) if time_diffs else 100
-                if avg_time_between_posts < 2:  # Less than 2 minutes between posts
-                    bot_features += 1
+#                 bot_status = bot_status_probability > 0.5  # Convert probability to boolean
+        
+#                 marked_accounts.append(
+#                     DetectionMark(
+#                         user_id=user['id'], 
+#                         confidence=bot_status_probability, 
+#                         bot=bot_status
+#                     )
+#                 )
 
-            # Check for identical post beginnings
-                if len(user_posts) >= 5:
-                    beginnings = [post["text"][:15].lower() for post in user_posts]
-                    unique_beginnings = set(beginnings)
-                    
-                    if len(unique_beginnings) / len(beginnings) < 0.4:
-                        bot_features += 1
+#         return marked_accounts
 
-            # Determine bot status based on bot features
-            bot_status = bot_features >= 2
+# class Detector(ADetector):
+    
+#     def __init__(self):
+#         self.model = pickle.load(open("logisticRegressor.pkl", "rb"))
+#         print("Model expects features:", self.model.feature_names_in_)  # Debugging
 
-            # Dynamic confidence score (scales with bot indicators)
-            confidence = min(100, bot_features * 20)
+#     def detect_bot(self, session_data):
+#         marked_accounts = []
 
-            marked_accounts.append(DetectionMark(user_id=user['id'], confidence=confidence, bot=bot_status))
+#         # Convert session_data.users into a DataFrame
+#         df = pd.DataFrame(session_data.users)
 
-        return marked_accounts
+#         # Ensure required features exist
+#         required_features = ['username', 'tweet_count', 'z_score']
+#         if not all(col in df.columns for col in required_features):
+#             raise ValueError(f"Missing required features: {set(required_features) - set(df.columns)}")
+
+#         # Encode username **once** (before looping)
+#         label_encoder = LabelEncoder()
+#         df["username_encoded"] = label_encoder.fit_transform(df["username"])
+
+#         # Keep only required columns
+#         df = df[['username_encoded', 'tweet_count', 'z_score']]
+#         print("Processed DataFrame:\n", df.head())  # Debugging
+
+#         # Loop through each user and predict bot status
+#         for _, user in df.iterrows():
+#             # Convert row to NumPy array with correct shape (1, 3)
+#             features = user.values.reshape(1, -1)  # ✅ Now it has shape (1, 3)
+
+#             # Make prediction
+#             bot_status_probability = self.model.predict_proba(features)[0][1]  # Get probability of bot class
+#             bot_status = bot_status_probability > 0.5  # Convert probability to boolean
+
+#             # Append detection result
+#             marked_accounts.append(
+#                 DetectionMark(
+#                     user_id=user['username_encoded'],  # Assuming user_id is username_encoded
+#                     confidence=bot_status_probability, 
+#                     bot=bot_status
+#                 )
+#             )
+
+#         return marked_accounts
+
+
+# import pickle
+# import numpy as np
+# import pandas as pd
+# from sklearn.preprocessing import LabelEncoder
+
+# class Detector(ADetector):
+    
+#     def __init__(self):
+#         self.model = pickle.load(open("logisticRegressor.pkl", "rb"))
+#         print("Model expects features:", self.model.feature_names_in_)  # Debugging
+
+#     def detect_bot(self, session_data):
+#         marked_accounts = []
+
+#         # Convert session_data.users into a DataFrame
+#         df = pd.DataFrame(session_data.users)
+
+#         # Ensure required features exist
+#         required_features = ['username', 'tweet_count', 'z_score']
+#         if not all(col in df.columns for col in required_features):
+#             raise ValueError(f"Missing required features: {set(required_features) - set(df.columns)}")
+
+#         # Encode username **once** (before looping)
+#         label_encoder = LabelEncoder()
+#         df["username"] = label_encoder.fit_transform(df["username"]).astype(str)  # Ensure it's a string
+
+#         # Keep only required columns and ensure they match model features
+#         df = df[['username', 'tweet_count', 'z_score']]
+#         df.columns = self.model.feature_names_in_  # Ensure column names match
+
+#         print("Processed DataFrame:\n", df.head())  # Debugging
+
+#         # Loop through each user and predict bot status
+#         for i, user in df.iterrows():
+#             # Convert row to NumPy array with correct shape (1, 3)
+#             features = user.values.reshape(1, -1)
+
+#             # Make prediction
+#             bot_status_probability = self.model.predict_proba(features)[0][1]  # Get probability of bot class
+#             bot_status = bot_status_probability > 0.5  # Convert probability to boolean
+
+#             # Ensure `user_id` is a string, and `confidence` is an integer
+#             user_id = str(session_data.users[i]['id'])  # Ensure user_id is a string
+#             confidence = int(bot_status_probability * 100)  # Convert probability to int percentage
+
+#             # Append detection result
+#             marked_accounts.append(
+#                 DetectionMark(
+#                     user_id=user_id,  # Now it's a string
+#                     confidence=confidence,  # Now it's an integer
+#                     bot=bot_status
+#                 )
+#             )
+
+#         return marked_accounts
+
+
+
+
+
+
+
+
