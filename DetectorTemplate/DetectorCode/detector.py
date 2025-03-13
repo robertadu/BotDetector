@@ -7,6 +7,7 @@ import statistics
 import re
 
 class Detector(ADetector):
+
     def detect_bot(self, session_data):
         marked_accounts = []
 
@@ -114,3 +115,7 @@ class Detector(ADetector):
             marked_accounts.append(DetectionMark(user_id=user['id'], confidence=confidence, bot=bot_status))
 
         return marked_accounts
+
+
+
+
