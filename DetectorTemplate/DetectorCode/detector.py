@@ -1,17 +1,34 @@
 from abc_classes import ADetector
 from teams_classes import DetectionMark
 import json 
-import datetime 
-import math 
-import statistics
-import re
-
 import pandas as pd 
-import pickle
 import numpy as np
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import LabelEncoder
+
+class Detector(ADetector):
+    def detect_bot(self, session_data):
+
+        # Displaying data for testing purposes 
+        post_data = json.dumps(session_data.posts, indent=4)
+        user_data = json.dumps(session_data.users, indent=4)
+
+        # print("Post Data:", post_data)
+        # print("User Data:", user_data)
+
+        # Writing post data 14 to a file to use later 
+        # with open('post_data.json', 'w') as f: 
+        #    json.dump(session_data.posts, f)
+
+        # Writing user data 14 to a file to use later 
+        # with open('user_data.json', 'w') as f: 
+        #    json.dump(session_data.users, f)
+
+        marked_account = []
+
+        for user in session_data.users:
+            marked_account.append(DetectionMark(user_id=user['id'], confidence=50, bot=False))
+
+        return marked_account
 
 
 # class Detector(ADetector):
