@@ -10,13 +10,13 @@ from teams_classes import DetectionMark
 from api_requests import get_session_data, submit_detection
 import json
 
-# Competition Environment Variables
-session_id = int(os.getenv('SESSION_ID'))
-code_max_time = int(os.getenv('MAX_TIME'))
+# # Competition Environment Variables
+# session_id = int(os.getenv('SESSION_ID'))
+# code_max_time = int(os.getenv('MAX_TIME'))
 
-# # Testing Environment Variables
-# session_id = 15
-# code_max_time = 3601
+# Testing Environment Variables
+session_id = 15
+code_max_time = 3601
 
 logging.basicConfig(
     filename='run.log',
