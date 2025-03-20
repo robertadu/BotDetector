@@ -1,6 +1,7 @@
 from abc_classes import ADetector
 from teams_classes import DetectionMark
 import json 
+import requests 
 import pandas as pd 
 import numpy as np
 

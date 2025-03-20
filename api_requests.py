@@ -9,7 +9,7 @@ import json
 
 # Testing Environment Variables
 base_url = ' http://3.92.68.65:3000/api/test/1' 
-authentication_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZWFtSWQiOiI0OSIsInRlYW1OYW1lIjoicm9iZXJ0YWRldGVjdG9yMiIsImlhdCI6MTc0MjIyMjQzMCwiZXhwIjoxNzQyMzA4ODMwfQ.JiWmk9-FjdprjLvPONfRK9Dl6tOKFS7tTJQ5XxvT9j8"
+authentication_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZWFtSWQiOiI0OSIsInRlYW1OYW1lIjoicm9iZXJ0YWRldGVjdG9yMiIsImlhdCI6MTc0MjQ0MDg5NSwiZXhwIjoxNzQyNTI3Mjk1fQ.n4WdZUTpbIayRk6NWRgyTETZPwRRYsSK8R_3ur7cMLU"
 session_id = 14
 
 header = {'Authorization': 'bearer ' + authentication_token, 'Content-Type': 'application/json'}
