@@ -1,33 +1,12 @@
 from abc_classes import ADetector
 from teams_classes import DetectionMark
-import json 
-import datetime 
 import math 
-import statistics
 import re
 
 class Detector(ADetector):
 
-    def sigmoid(self, z):
-        return 1 / (1 + math.exp(-z))
-
     def detect_bot(self, session_data):
         marked_accounts = []
-
-        # Pre-trained weights for logistic regression
-        weights = {
-            "username_bot": 1.5,
-            "display_name_bot": 1.2,
-            "numeric_username": 1.8,
-            "short_description": 1.3,
-            "random_chars_username": 1.5,
-            "tweets_per_day": 2.0,
-            "extreme_z_score": 2.2,
-            "repetitive_content": 1.7,
-            "high_posting_frequency": 2.5,
-            "identical_beginnings": 1.4,
-            "bias": -5.0  # Adjust to tune threshold
-        }
 
         for user in session_data.users:
             features = []  # List to store feature values
@@ -109,17 +88,33 @@ class Detector(ADetector):
             else:
                 features.append(0)
 
-            # Logistic Regression Calculation
-            weighted_sum = sum(feature * weight for feature, weight in zip(features, weights.values()))
-            bot_probability = self.sigmoid(weighted_sum)
+            # Repetitive Hashtags 
+            hashtags = []
+            for post in user_posts:
+                hashtags += re.findall(r"#\w+", post["text"].lower())
 
-            # Classification
-            bot_status = bot_probability > 0.5  # Threshold at 50%
+            hashtag_ratio = len(set(hashtags)) / len(hashtags) if hashtags else 1
+            features.append(int(len(hashtags) > 10 and hashtag_ratio < 0.4))
 
-            # Confidence calculation
-            confidence = int(bot_probability * 100)
+
+           # Scoring Logic
+            score = sum(features)
+            bot_status = score >= 2
+            confidence = int(100 * (1 - math.exp(-score)))
 
             marked_accounts.append(DetectionMark(user_id=user['id'], confidence=confidence, bot=bot_status))
+
+            marked_bots = 0
+            unmarked_bots = 0 
+
+            for account in marked_accounts:
+                if account.bot == True:
+                    marked_bots += 1
+                else: 
+                    unmarked_bots += 1
+                print(account)
+
+            print("Marked bot num: ", marked_bots, "Unmarked bot num: ", unmarked_bots)
 
         return marked_accounts
 
