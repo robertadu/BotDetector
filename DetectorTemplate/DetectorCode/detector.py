@@ -107,14 +107,14 @@ class Detector(ADetector):
             marked_bots = 0
             unmarked_bots = 0 
 
-            for account in marked_accounts:
-                if account.bot == True:
-                    marked_bots += 1
-                else: 
-                    unmarked_bots += 1
-                print(account)
+            # for account in marked_accounts:
+            #     if account.bot == True:
+            #         marked_bots += 1
+            #     else: 
+            #         unmarked_bots += 1
+            #     print(account)
 
-            print("Marked bot num: ", marked_bots, "Unmarked bot num: ", unmarked_bots)
+            # print("Marked bot num: ", marked_bots, "Unmarked bot num: ", unmarked_bots)
 
         return marked_accounts
 
